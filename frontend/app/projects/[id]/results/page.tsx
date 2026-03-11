@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 export default function ResultsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -26,6 +27,17 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     poll();
     return () => clearTimeout(timer);
   }, [params.id]);
+
+  useEffect(() => {
+    const loadSummary = async () => {
+      if (!project?.preview_path || !project.preview_path.endsWith('.txt')) return;
+      const url = mediaUrl(project.preview_path);
+      if (!url) return;
+      const res = await fetch(url);
+      if (res.ok) setSummaryText(await res.text());
+    };
+    loadSummary();
+  }, [project?.preview_path]);
 
   return (
     <main className="mx-auto mt-12 max-w-3xl rounded bg-white p-8 shadow">
@@ -53,6 +65,14 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
+          {project.preview_path?.endsWith('.txt') && summaryText && (
+            <div className="rounded border bg-slate-50 p-4 text-sm">
+              <h2 className="mb-2 font-semibold">Processing summary</h2>
+              <p>{summaryText}</p>
+            </div>
+          )}
+
+          {project.preview_path && !project.preview_path.endsWith('.txt') && (
           {project.preview_path && (
             <div>
               <h2 className="mb-2 font-semibold">Preview frame</h2>
