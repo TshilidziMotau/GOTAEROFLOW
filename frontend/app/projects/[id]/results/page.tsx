@@ -10,13 +10,15 @@ type ResultsPageProps = {
   };
 };
 
-function ResultsPage({ params }: ResultsPageProps) {
+export default function ResultsPage({ params }: ResultsPageProps) {
+export default function ResultsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [summaryText, setSummaryText] = useState('');
+  const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+    let timer: NodeJS.Timeout | undefined;
+    let timer: NodeJS.Timeout;
 
     const poll = async () => {
       try {
@@ -34,16 +36,14 @@ function ResultsPage({ params }: ResultsPageProps) {
     poll();
 
     return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
+      if (timer) clearTimeout(timer);
     };
+    return () => clearTimeout(timer);
   }, [params.id]);
 
   useEffect(() => {
     const loadSummary = async () => {
       if (!project?.preview_path || !project.preview_path.endsWith('.txt')) return;
-
       const url = mediaUrl(project.preview_path);
       if (!url) return;
 
@@ -53,6 +53,9 @@ function ResultsPage({ params }: ResultsPageProps) {
       }
     };
 
+      const res = await fetch(url);
+      if (res.ok) setSummaryText(await res.text());
+    };
     loadSummary();
   }, [project?.preview_path]);
 
@@ -63,6 +66,8 @@ function ResultsPage({ params }: ResultsPageProps) {
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {!project && <p className="mt-3">Loading...</p>}
 
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {!project && <p className="mt-3">Loading...</p>}
       {project && (
         <div className="mt-4 space-y-6">
           <div className="flex items-center gap-3">
@@ -73,6 +78,7 @@ function ResultsPage({ params }: ResultsPageProps) {
           {project.status === 'processing' && (
             <p className="animate-pulse text-sm">Processing video...</p>
           )}
+          {project.status === 'processing' && <p className="animate-pulse text-sm">Processing video...</p>}
 
           <div className="rounded border p-4">
             <p className="text-sm text-slate-500">Total car count</p>
@@ -87,6 +93,7 @@ function ResultsPage({ params }: ResultsPageProps) {
                 className="w-full rounded border"
                 src={mediaUrl(project.uploaded_video_url) ?? undefined}
               />
+              <video controls className="w-full rounded border" src={mediaUrl(project.uploaded_video_url) ?? undefined} />
             </div>
           )}
 
@@ -105,6 +112,10 @@ function ResultsPage({ params }: ResultsPageProps) {
                 alt="Processed preview"
                 className="w-full rounded border"
               />
+          {project.preview_path && (
+            <div>
+              <h2 className="mb-2 font-semibold">Preview frame</h2>
+              <img src={mediaUrl(project.preview_path) ?? ''} alt="Processed preview" className="w-full rounded border" />
             </div>
           )}
         </div>
@@ -114,5 +125,3 @@ function ResultsPage({ params }: ResultsPageProps) {
     </main>
   );
 }
-
-export default ResultsPage;
