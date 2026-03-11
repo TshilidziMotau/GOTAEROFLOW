@@ -73,6 +73,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           )}
 
           {project.preview_path && !project.preview_path.endsWith('.txt') && (
+          {project.preview_path && (
             <div>
               <h2 className="mb-2 font-semibold">Preview frame</h2>
               <img src={mediaUrl(project.preview_path) ?? ''} alt="Processed preview" className="w-full rounded border" />
