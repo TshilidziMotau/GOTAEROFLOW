@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+backend/.venv/
+backend/uploads/*
+backend/processed/*
+!backend/uploads/.gitkeep
+!backend/processed/.gitkeep
+frontend/node_modules/
+frontend/.next/
