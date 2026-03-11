@@ -4,18 +4,27 @@ import { useEffect, useState } from 'react';
 import { getStatus, mediaUrl, Project } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 
+type ResultsPageProps = {
+  params: {
+    id: string;
+  };
+};
+
+export default function ResultsPage({ params }: ResultsPageProps) {
 export default function ResultsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
     let timer: NodeJS.Timeout;
 
     const poll = async () => {
       try {
         const res = await getStatus(Number(params.id));
         setProject(res);
+
         if (res.status !== 'completed' && res.status !== 'failed') {
           timer = setTimeout(poll, 3000);
         }
@@ -25,6 +34,10 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     };
 
     poll();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
     return () => clearTimeout(timer);
   }, [params.id]);
 
@@ -33,6 +46,13 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       if (!project?.preview_path || !project.preview_path.endsWith('.txt')) return;
       const url = mediaUrl(project.preview_path);
       if (!url) return;
+
+      const res = await fetch(url);
+      if (res.ok) {
+        setSummaryText(await res.text());
+      }
+    };
+
       const res = await fetch(url);
       if (res.ok) setSummaryText(await res.text());
     };
@@ -42,6 +62,10 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   return (
     <main className="mx-auto mt-12 max-w-3xl rounded bg-white p-8 shadow">
       <h1 className="text-2xl font-bold">Project Results</h1>
+
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {!project && <p className="mt-3">Loading...</p>}
+
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {!project && <p className="mt-3">Loading...</p>}
       {project && (
@@ -51,6 +75,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             <StatusBadge status={project.status} />
           </div>
 
+          {project.status === 'processing' && (
+            <p className="animate-pulse text-sm">Processing video...</p>
+          )}
           {project.status === 'processing' && <p className="animate-pulse text-sm">Processing video...</p>}
 
           <div className="rounded border p-4">
@@ -61,6 +88,11 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           {project.uploaded_video_url && (
             <div>
               <h2 className="mb-2 font-semibold">Uploaded video</h2>
+              <video
+                controls
+                className="w-full rounded border"
+                src={mediaUrl(project.uploaded_video_url) ?? undefined}
+              />
               <video controls className="w-full rounded border" src={mediaUrl(project.uploaded_video_url) ?? undefined} />
             </div>
           )}
@@ -73,6 +105,13 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           )}
 
           {project.preview_path && !project.preview_path.endsWith('.txt') && (
+            <div>
+              <h2 className="mb-2 font-semibold">Preview frame</h2>
+              <img
+                src={mediaUrl(project.preview_path) ?? ''}
+                alt="Processed preview"
+                className="w-full rounded border"
+              />
           {project.preview_path && (
             <div>
               <h2 className="mb-2 font-semibold">Preview frame</h2>
@@ -81,6 +120,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           )}
         </div>
       )}
+
       {/* TODO(v2): add directional line crossing and richer per-lane analytics. */}
     </main>
   );
