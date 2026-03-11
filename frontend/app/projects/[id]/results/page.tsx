@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Project, getStatus, mediaUrl } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { getStatus, mediaUrl, Project } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 
 type ResultsPageProps = {
@@ -11,69 +11,51 @@ type ResultsPageProps = {
 };
 
 export default function ResultsPage({ params }: ResultsPageProps) {
-  const projectId = useMemo(() => Number(params.id), [params.id]);
-
+export default function ResultsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
-  const [summaryText, setSummaryText] = useState('');
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
-    if (Number.isNaN(projectId)) {
-      setLoading(false);
-      setError('Invalid project id');
-      return;
-    }
-
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let cancelled = false;
+    let timer: NodeJS.Timeout | undefined;
+    let timer: NodeJS.Timeout;
 
     const poll = async () => {
       try {
-        const data = await getStatus(projectId);
-        if (cancelled) return;
+        const res = await getStatus(Number(params.id));
+        setProject(res);
 
-        setProject(data);
-        setLoading(false);
-
-        if (data.status !== 'completed' && data.status !== 'failed') {
+        if (res.status !== 'completed' && res.status !== 'failed') {
           timer = setTimeout(poll, 3000);
         }
       } catch (err) {
-        if (cancelled) return;
-        setLoading(false);
-        setError((err as Error).message || 'Failed to load project status');
+        setError((err as Error).message);
       }
     };
 
     poll();
 
     return () => {
-      cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [projectId]);
+    return () => clearTimeout(timer);
+  }, [params.id]);
 
   useEffect(() => {
     const loadSummary = async () => {
-      if (!project?.preview_path || !project.preview_path.endsWith('.txt')) {
-        setSummaryText('');
-        return;
-      }
+      if (!project?.preview_path || !project.preview_path.endsWith('.txt')) return;
+      const url = mediaUrl(project.preview_path);
+      if (!url) return;
 
-      try {
-        const url = mediaUrl(project.preview_path);
-        if (!url) return;
-
-        const res = await fetch(url);
-        if (!res.ok) return;
-
+      const res = await fetch(url);
+      if (res.ok) {
         setSummaryText(await res.text());
-      } catch {
-        setSummaryText('');
       }
     };
 
+      const res = await fetch(url);
+      if (res.ok) setSummaryText(await res.text());
+    };
     loadSummary();
   }, [project?.preview_path]);
 
@@ -81,60 +63,65 @@ export default function ResultsPage({ params }: ResultsPageProps) {
     <main className="mx-auto mt-12 max-w-3xl rounded bg-white p-8 shadow">
       <h1 className="text-2xl font-bold">Project Results</h1>
 
-      {loading && <p className="mt-3 text-sm">Loading project data...</p>}
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {!project && <p className="mt-3">Loading...</p>}
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-      {!loading && !error && project && (
-        <div className="mt-6 space-y-6">
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {!project && <p className="mt-3">Loading...</p>}
+      {project && (
+        <div className="mt-4 space-y-6">
           <div className="flex items-center gap-3">
-            <span className="font-medium">Status:</span>
+            <p className="font-medium">Status:</p>
             <StatusBadge status={project.status} />
           </div>
 
           {project.status === 'processing' && (
-            <p className="animate-pulse text-sm text-slate-600">Processing video...</p>
+            <p className="animate-pulse text-sm">Processing video...</p>
           )}
+          {project.status === 'processing' && <p className="animate-pulse text-sm">Processing video...</p>}
 
-          <section className="rounded border p-4">
+          <div className="rounded border p-4">
             <p className="text-sm text-slate-500">Total car count</p>
             <p className="text-4xl font-bold">{project.car_count}</p>
-          </section>
+          </div>
 
           {project.uploaded_video_url && (
-            <section>
+            <div>
               <h2 className="mb-2 font-semibold">Uploaded video</h2>
               <video
                 controls
                 className="w-full rounded border"
                 src={mediaUrl(project.uploaded_video_url) ?? undefined}
               />
-            </section>
+              <video controls className="w-full rounded border" src={mediaUrl(project.uploaded_video_url) ?? undefined} />
+            </div>
           )}
 
           {project.preview_path?.endsWith('.txt') && summaryText && (
-            <section className="rounded border bg-slate-50 p-4 text-sm">
+            <div className="rounded border bg-slate-50 p-4 text-sm">
               <h2 className="mb-2 font-semibold">Processing summary</h2>
               <p>{summaryText}</p>
-            </section>
+            </div>
           )}
 
           {project.preview_path && !project.preview_path.endsWith('.txt') && (
-            <section>
+            <div>
               <h2 className="mb-2 font-semibold">Preview frame</h2>
               <img
                 src={mediaUrl(project.preview_path) ?? ''}
                 alt="Processed preview"
                 className="w-full rounded border"
               />
-            </section>
+          {project.preview_path && (
+            <div>
+              <h2 className="mb-2 font-semibold">Preview frame</h2>
+              <img src={mediaUrl(project.preview_path) ?? ''} alt="Processed preview" className="w-full rounded border" />
+            </div>
           )}
         </div>
       )}
 
-      {!loading && !error && !project && (
-        <p className="mt-3 text-sm text-slate-600">Project was not found.</p>
-      )}
+      {/* TODO(v2): add directional line crossing and richer per-lane analytics. */}
     </main>
   );
 }

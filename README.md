@@ -7,6 +7,8 @@ Small MVP web app for drone video upload and **car-only counting**.
 - Upload one `.mp4` video
 - Process video in backend
 - Detect/count **cars only** via an ML counting service
+- Detect **cars only** (COCO class `car`)
+- Track cars and count unique track IDs to reduce double counting
 - Show processing status and final count in frontend
 
 > Not included yet: school mode, queues, pedestrians, parking, GIS, complex dashboard, reports.
@@ -23,6 +25,7 @@ Recommended architecture for production:
 1. Keep this API service lightweight.
 2. Run CV/ML in a separate worker/service (GPU or optimized CPU image).
 3. API calls ML service and stores returned `car_count`.
+- CV: OpenCV + Ultralytics YOLOv8 tracker
 
 ## Local run (recommended with Docker)
 1. Copy env file:
@@ -70,6 +73,16 @@ NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 
 ## TODOs for v2
 - Add dedicated ML worker service template (YOLO + tracker + queue)
+- `GET /projects/{id}/status` - status + preview + count
+- `GET /projects/{id}/count` - final count payload
+
+## Counting approach (MVP)
+- Detector/tracker: `YOLO("yolov8n.pt").track(..., persist=True)`
+- Filter detections to COCO class id `2` (`car`) only
+- Counting strategy: unique tracker IDs across frames
+- This is simple and practical for MVP; it is not lane-direction aware yet.
+
+## TODOs for v2
 - Add robust line-crossing direction logic
 - Add camera calibration and lane-level analytics
 - Add role-based auth and proper user/project ownership
