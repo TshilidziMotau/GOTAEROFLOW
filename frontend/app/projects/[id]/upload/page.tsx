@@ -30,11 +30,11 @@ export default function UploadPage({ params }: { params: { id: string } }) {
   return (
     <main className="mx-auto mt-12 max-w-xl rounded bg-white p-8 shadow">
       <h1 className="text-xl font-bold">Upload .mp4 Video</h1>
-      <p className="mt-2 text-sm text-slate-600">Upload one video file (.mp4, .avi, .mov, .mkv).</p>
+      <p className="mt-2 text-sm text-slate-600">Only one .mp4 upload is supported in this MVP.</p>
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <input
           required
-          accept=".mp4,.avi,.mov,.mkv"
+          accept="video/mp4"
           type="file"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="w-full rounded border p-2"

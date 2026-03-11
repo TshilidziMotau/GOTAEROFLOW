@@ -1,9 +1,9 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ProjectCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: str
 
 
 class ProjectResponse(BaseModel):
