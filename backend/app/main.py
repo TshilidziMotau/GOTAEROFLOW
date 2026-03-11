@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -16,7 +16,6 @@ Base.metadata.create_all(bind=engine)
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "backend/uploads"))
 PROCESSED_DIR = Path(os.getenv("PROCESSED_DIR", "backend/processed"))
-ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -49,12 +48,6 @@ def healthcheck():
     return {"status": "ok"}
 
 
-@app.get("/projects", response_model=list[ProjectResponse])
-def list_projects(limit: int = Query(default=20, ge=1, le=100), db: Session = Depends(get_db)):
-    projects = db.query(Project).order_by(Project.created_at.desc()).limit(limit).all()
-    return [serialize_project(project) for project in projects]
-
-
 @app.post("/projects", response_model=ProjectResponse)
 def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
     project = Project(name=payload.name, status=ProjectStatus.uploaded)
@@ -66,15 +59,14 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
 
 @app.post("/projects/{project_id}/upload", response_model=ProjectResponse)
 def upload_video(project_id: int, video: UploadFile = File(...), db: Session = Depends(get_db)):
-    ext = Path(video.filename).suffix.lower()
-    if ext not in ALLOWED_VIDEO_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Only .mp4, .avi, .mov, .mkv files are supported")
+    if not video.filename.lower().endswith(".mp4"):
+        raise HTTPException(status_code=400, detail="Only .mp4 files are supported in MVP")
 
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    filename = f"{project_id}-{uuid4().hex}{ext}"
+    filename = f"{project_id}-{uuid4().hex}.mp4"
     dest = UPLOAD_DIR / filename
     with dest.open("wb") as f:
         f.write(video.file.read())
@@ -97,6 +89,7 @@ def run_processing(project_id: int):
         db.commit()
 
         preview_path = PROCESSED_DIR / f"summary-{project_id}.txt"
+        preview_path = PROCESSED_DIR / f"preview-{project_id}.jpg"
         car_count = process_video(project.video_path, str(preview_path))
 
         project.car_count = car_count

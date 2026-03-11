@@ -20,12 +20,6 @@ export async function createProject(name: string): Promise<Project> {
   return res.json();
 }
 
-export async function listProjects(limit = 20): Promise<Project[]> {
-  const res = await fetch(`${API_URL}/projects?limit=${limit}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to load projects');
-  return res.json();
-}
-
 export async function uploadProjectVideo(projectId: number, file: File): Promise<Project> {
   const form = new FormData();
   form.append('video', file);
