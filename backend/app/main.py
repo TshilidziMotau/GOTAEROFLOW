@@ -89,6 +89,7 @@ def run_processing(project_id: int):
         db.commit()
 
         preview_path = PROCESSED_DIR / f"summary-{project_id}.txt"
+        preview_path = PROCESSED_DIR / f"preview-{project_id}.jpg"
         car_count = process_video(project.video_path, str(preview_path))
 
         project.car_count = car_count
