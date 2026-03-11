@@ -11,14 +11,12 @@ type ResultsPageProps = {
 };
 
 export default function ResultsPage({ params }: ResultsPageProps) {
-export default function ResultsPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
-    let timer: NodeJS.Timeout;
 
     const poll = async () => {
       try {
@@ -38,7 +36,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     return () => {
       if (timer) clearTimeout(timer);
     };
-    return () => clearTimeout(timer);
   }, [params.id]);
 
   useEffect(() => {
@@ -53,9 +50,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       }
     };
 
-      const res = await fetch(url);
-      if (res.ok) setSummaryText(await res.text());
-    };
     loadSummary();
   }, [project?.preview_path]);
 
@@ -66,8 +60,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {!project && <p className="mt-3">Loading...</p>}
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      {!project && <p className="mt-3">Loading...</p>}
       {project && (
         <div className="mt-4 space-y-6">
           <div className="flex items-center gap-3">
@@ -78,7 +70,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           {project.status === 'processing' && (
             <p className="animate-pulse text-sm">Processing video...</p>
           )}
-          {project.status === 'processing' && <p className="animate-pulse text-sm">Processing video...</p>}
 
           <div className="rounded border p-4">
             <p className="text-sm text-slate-500">Total car count</p>
@@ -93,7 +84,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 className="w-full rounded border"
                 src={mediaUrl(project.uploaded_video_url) ?? undefined}
               />
-              <video controls className="w-full rounded border" src={mediaUrl(project.uploaded_video_url) ?? undefined} />
             </div>
           )}
 
@@ -112,10 +102,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 alt="Processed preview"
                 className="w-full rounded border"
               />
-          {project.preview_path && (
-            <div>
-              <h2 className="mb-2 font-semibold">Preview frame</h2>
-              <img src={mediaUrl(project.preview_path) ?? ''} alt="Processed preview" className="w-full rounded border" />
             </div>
           )}
         </div>
